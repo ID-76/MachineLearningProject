@@ -64,4 +64,4 @@ for target in columns_with_na:
 #as we will remove them or not depending of each model we are doing
 
 #We store the cleaned dataframe as a csv to work with it in the future
-df.to_csv("traffic_accidents_cleaned.csv", index = False)
+#df.to_csv("traffic_accidents_cleaned.csv", index = False)
