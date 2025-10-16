@@ -31,26 +31,37 @@ for col in str_cols:
 # we are going to replace the values by doing a decision tree
 #print(df.isnull().mean() * 100)
 
-train_df = df[df["traffic_control_device"].notna()]
-test_df = df[df["traffic_control_device"].isna()]
+columns_with_na = ["traffic_control_device", "weather_condition", "lighting_condition", "roadway_surface_cond", "road_defect", "trafficway_type"]
+for target in columns_with_na:
+    
+    train_df = df[df[target].notna()]
+    test_df = df[df[target].isna()]
 
-X_train = pd.get_dummies(train_df.drop(columns=["traffic_control_device"]))
-y_train = train_df ["traffic_control_device"]
+    #print("\nDistribution of values before data inputation (original data):")
+    #print(df[target].value_counts())
 
-X_test = pd.get_dummies(test_df.drop(columns=["traffic_control_device"]))
+    X_train = pd.get_dummies(train_df.drop(columns=[target]))
+    y_train = train_df [target]
 
-#Necesary funtion after applying the dummies function, so both dataframes have same columns
-X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
+    X_test = pd.get_dummies(test_df.drop(columns=[target]))
 
-clf = DecisionTreeClassifier(max_depth=6)
-clf = clf.fit(X_train, y_train)
+    #Necesary funtion after applying the dummies function, so both dataframes have same columns
+    X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
-preds = clf.predict(X_test)
-df.loc[df["traffic_control_device"].isna(), "traffic_control_device"] = preds
+    clf = DecisionTreeClassifier(max_depth=6)
+    clf = clf.fit(X_train, y_train)
 
-print(df.isnull().mean() * 100)
+    preds = clf.predict(X_test)
+    df.loc[df[target].isna(), target] = preds
+
+    #print("Distribution of target after inputation:")
+    #print(df[target].value_counts())
+
+#print(df.isnull().mean() * 100)
 
 #Looking at the description of the dataset we can see that are outliers, but they don't look as being errors, 
 #so for this first data cleaning we are not going to remove outliers, 
 #as we will remove them or not depending of each model we are doing
 
+#We store the cleaned dataframe as a csv to work with it in the future
+df.to_csv("traffic_accidents_cleaned.csv", index = False)
