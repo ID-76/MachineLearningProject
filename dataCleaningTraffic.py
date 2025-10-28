@@ -7,8 +7,17 @@ pd.set_option('display.max_columns', None)
 
 #Some functions to analise the variables
 #df.info()
+#print(df.shape)
 #print(df.describe())
 #print(df.describe(include = object))
+
+#First we are going to convert the float type variables into int, as they are discrete variables
+float_columns = ['injuries_total', 'injuries_fatal', 'injuries_incapacitating',
+    'injuries_non_incapacitating', 'injuries_reported_not_evident',
+    'injuries_no_indication']
+
+df[float_columns] = df[float_columns].astype(int)
+#df.info()
 
 #We are going to remove the crash_date column as it isn't useful
 df = df.drop(columns= "crash_date")
