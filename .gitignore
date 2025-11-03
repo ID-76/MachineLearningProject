@@ -206,3 +206,11 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 US_Accidents_March23.csv
+
+MachineLearningProject.code-workspace
+
+.DS_Store
+
+US_Accidents_March23_sampled_500k.csv
+
+US_Accidents_processed_for_modeling.csv
