@@ -214,3 +214,4 @@ MachineLearningProject.code-workspace
 US_Accidents_March23_sampled_500k.csv
 
 US_Accidents_processed_for_modeling.csv
+optuna_birch.db
