@@ -7,9 +7,6 @@ from sklearn.utils import resample
 from sklearn.cluster import Birch
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 import os
-# ============================================
-# CARGA Y PREPROCESADO (tu mismo código)
-# ============================================
 
 df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
 
@@ -35,9 +32,8 @@ X_scaled = scaler.fit_transform(df_processed)
 print("Dimensiones del dataset procesado:", X_scaled.shape)
 
 
-# ============================================
+
 # OPTUNA: OBJETIVE FUNCTION
-# ============================================
 """
 db_file = "optuna_birch.db"
 if os.path.exists(db_file):
@@ -78,11 +74,6 @@ def objective(trial):
     silhouette = silhouette_score(X_sample, labels)
 
     return silhouette   # queremos MAX silhouette
-
-
-# ============================================
-# OPTUNA STUDY
-# ============================================
 
 study.optimize(objective, n_trials=40)
 
