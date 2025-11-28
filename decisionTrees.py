@@ -88,8 +88,19 @@ model = RandomForestClassifier(
 
 model.fit(X_train, y_train)
 
-# 6. Predicción
+# 13. Predicción
 y_pred = model.predict(X_test)
 
-# 7. Performance
+# 14. Performance
 print("Accuracy:", accuracy_score(y_test, y_pred))
+
+# 15. Visualize one of the trees inside the Random Forest
+# plt.figure(figsize=(25, 15))
+# tree.plot_tree(
+#     model.estimators_[0], 
+#     filled=True,
+#     feature_names=X.columns,
+#     class_names=[str(c) for c in model.classes_]
+# )
+# plt.title("Árbol 0 del Random Forest")
+# plt.show()
