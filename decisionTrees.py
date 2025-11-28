@@ -6,11 +6,35 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
+"""
+Here are some results with different target columns using ID3, CART and Random Forest:
+- Target: "alignment" (The alignment of the road where the accident occurred)
+    - ID3: ~0.95 accuracy
+    - CART: ~0.95 accuracy
+    - Random Forest: ~0.98 accuracy
+- Target: "crash_type" (The overall type of the crash)
+    - ID3: ~0.79 accuracy
+    - CART: ~0.79 accuracy
+    - Random Forest: ~0.83 accuracy
+- Target: "damage" (The extent of the damage caused by the accident)
+    - ID3: ~0.60 accuracy
+    - CART: ~0.60 accuracy
+    - Random Forest: ~0.70 accuracy
+- Target: "traffic_control_device" (The type of traffic control device involved (e.g., traffic light, sign))
+    - ID3: ~0.55 accuracy
+    - CART: ~0.55 accuracy
+    - Random Forest: ~0.67 accuracy
+- Target: "first_crash_type" (The initial type of the crash (e.g., head-on, rear-end))
+    - ID3: ~0.47 accuracy
+    - CART: ~0.47 accuracy
+    - Random Forest: ~0.56 accuracy
+""" 
+
 # 1. Load dataset
 data = pd.read_csv("traffic_accidents_cleaned.csv")
 
 # 2. Select target column
-target = "crash_type"
+target = "alignment"  # Change this to try different target columns
 
 X = data.drop(columns=[target])
 y = data[target]
@@ -34,7 +58,7 @@ clf.fit(X_train, y_train)
 y_pred = clf.predict(X_test)
 
 # 7. Evaluate
-print("Accuracy:", accuracy_score(y_test, y_pred)) # In our case, around 0.79 of accuracy
+print("Accuracy:", accuracy_score(y_test, y_pred))
 
 # 8. Visualize the tree (uncomment to see the plot)
 # plt.figure(figsize=(25,15))
@@ -47,7 +71,7 @@ clf = clf.fit(X_train, y_train)
 
 # 10. Evaluate
 y_pred = clf.predict(X_test)
-print("Accuracy:", accuracy_score(y_test, y_pred)) # In our case, around 0.79 of accuracy, similar to the previous one in almost every time we run it
+print("Accuracy:", accuracy_score(y_test, y_pred))
 
 # 11. Visualize the tree (uncomment to see the plot)
 # plt.figure(figsize=(25,15))
@@ -56,10 +80,10 @@ print("Accuracy:", accuracy_score(y_test, y_pred)) # In our case, around 0.79 of
 
 # 12. Train a Random Forest Classifier
 model = RandomForestClassifier(
-    n_estimators=200,        # número de árboles
-    max_depth=None,         # crecer hasta que cada hoja sea pura
+    n_estimators=200,        
+    max_depth=None,         
     random_state=42,
-    n_jobs=-1               # usa todos los núcleos del CPU
+    n_jobs=-1               
 )
 
 model.fit(X_train, y_train)
@@ -68,4 +92,4 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 # 7. Performance
-print("Accuracy:", accuracy_score(y_test, y_pred)) # In our case, around 0.83 of accuracy
+print("Accuracy:", accuracy_score(y_test, y_pred))
