@@ -1,85 +1,108 @@
+import optuna
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
 from sklearn.utils import resample
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import calinski_harabasz_score
-from sklearn.metrics import davies_bouldin_score
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+import os
 
+# LOAD DATA
 df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
 
-#We remove those variables that are categorical and have too many unique values for doing dummies
-#Also we drop some boolean variables that has almost 0% of False and 100% of True, as they dont't provide information
-df_reduced = df.drop(columns = ["Start_Time", "End_Time", "City", "County", "State", "Zipcode", "Country", "Timezone", "Airport_Code", "Wind_Direction", "Civil_Twilight", "Nautical_Twilight", "Astronomical_Twilight", "Amenity", "Bump", "Give_Way", "No_Exit", "Railway", "Roundabout", "Traffic_Calming", "Turning_Loop", "Weather_Condition"])
-#We create dummy variables for categorical variables
-num_cols = df_reduced.select_dtypes(include=['int64', 'float64']).columns
-cat_cols = df_reduced.select_dtypes(include=['object', 'category']).columns
-df_cat_dummies = pd.get_dummies(df_reduced[cat_cols], drop_first=False)
+# Drop non-informative / ID / text fields
+df_reduced = df.drop(columns=[
+    "Start_Time", "End_Time", "City", "County", "State", "Zipcode", "Country",
+    "Timezone", "Airport_Code", "Wind_Direction", "Civil_Twilight",
+    "Nautical_Twilight", "Astronomical_Twilight", "Amenity", "Bump", "Give_Way",
+    "No_Exit", "Railway", "Roundabout", "Traffic_Calming", "Turning_Loop",
+    "Weather_Condition", "Start_Lat", "Start_Lng", "Wind_Chill(C)", "Distance(km)", "Stop",
+    "Junction", "Station"
+])
+
+print("Columns after reduction:", df_reduced.columns)
+
+num_cols = ['Severity', 'Humidity(%)', 'start_hour', 'start_dayofweek', 'start_month',
+            'duration_min', 'Temperature(C)', 'Wind_Speed(m/s)', 'Visibility(km)',
+            'Precipitation(mm)', 'Pressure(hPa)']
 df_num = df_reduced[num_cols]
-df_processed = pd.concat([df_num, df_cat_dummies], axis=1)
-#We scale the data so variables with high range don't affect too much
+
+bool_cols = ['Crossing', 'Traffic_Signal']
+df_bool = df_reduced[bool_cols].astype(int)
+
+# Make dummies for categorical variables
+df_sun = pd.get_dummies(df_reduced['Sunrise_Sunset'], prefix='Sunrise_Sunset', drop_first=True)
+
+# Concatenate everything
+df_processed = pd.concat([df_num, df_bool, df_sun], axis=1)
+print("Processed columns:", df_processed.columns)
+
+# Scale data 
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(df_processed)
-print(df_processed.shape)
-print(df_processed.columns)
 
-#We reduce the data, as when we have convert labels into numerical 
-#the number of dimensions have increased too much, and to improve the clustering results we will do PCA
+print("Final shape:", X_scaled.shape)
 
-"""
-for k in range(2, 10):
-    pca = PCA(n_components=k, random_state=42)
-    X_pca = pca.fit_transform(X_scaled)
+# Optuna search
+db_file = "Clustering/optuna_kmeans.db"
+if os.path.exists(db_file):
+    os.remove(db_file)
 
-    print("Explained variance by ",k," components:", pca.explained_variance_ratio_.sum())
-    kmeans = KMeans(init="k-means++", n_clusters=3, random_state=42)
-    kmeans.fit(X_pca)
+study = optuna.create_study(
+    study_name="kmeans_optimization",
+    storage=f"sqlite:///{db_file}",
+    direction="maximize",     # Silhouette: the higher the better
+    load_if_exists=False
+)
 
-    labels = kmeans.labels_  # los clusters asignados
+def objective(trial):
+    # Hyperparameters to optimize
+    n_clusters = trial.suggest_int("n_clusters", 3, 10)
+    n_init = trial.suggest_int("n_init", 5, 30)
 
-    sample_data, sample_labels = resample(X_pca, labels, n_samples=50000, random_state=42)
+    X_sample = resample(X_scaled, n_samples=50000, random_state=42)
+    
+    kmeans = KMeans(
+        n_clusters=n_clusters,
+        init="k-means++",
+        n_init=n_init,
+        random_state=42
+    )
+    
+    labels = kmeans.fit_predict(X_sample)
+    unique_clusters = len(set(labels))
+    
+    # Penalize if n_cluster < 2
+    if unique_clusters < 2:
+        return -1.0  
 
-    print(silhouette_score(sample_data, sample_labels))
-    print(calinski_harabasz_score(sample_data, sample_labels))
-    print(davies_bouldin_score(sample_data, sample_labels))
-"""
-#With this loop we can see that the best number of components is 2, as while we increase it the performance decrease
+    score = silhouette_score(X_sample, labels)
+    return score
 
-pca = PCA(n_components=2, random_state=42)
-X_pca = pca.fit_transform(X_scaled)
+# Execute optimization
+study.optimize(objective, n_trials=40)
 
-#n_digits = np.unique(df["Severity"]).size
-#Training
-#We will consider the Severity measure as a "target" value, 
-#and after applying clustering we will use it for validating the model
+print("Best found hyperparameters:")
+print(study.best_params)
 
-"""
-for k in range (2, 15):
-    kmeans = KMeans(init="k-means++", n_clusters=k, random_state=42)
-    kmeans.fit(X_pca)
+print("\nBest Silhouette:", study.best_value)
 
-    labels = kmeans.labels_  # los clusters asignados
 
-    sample_data, sample_labels = resample(X_pca, labels, n_samples=50000, random_state=42)
+# Best found hyperparameters with optuna: {'n_clusters': 9, 'n_init': 24}
+best_n_clusters = 9
+best_n_init = 24
 
-    print(k, silhouette_score(sample_data, sample_labels))
-    print(k, calinski_harabasz_score(sample_data, sample_labels))
-    print(k, davies_bouldin_score(sample_data, sample_labels))
-"""
+X_sample = resample(X_scaled, n_samples=50000, random_state=42)
 
-#After doing the loop for plenty number of clusters, we can see that the one with best results is making three clusters
-#We were going to select the variable "Severity" as target, 
-# but as the ideal number of clusters don't matches the number of unique labels in the variable we won't do it
+kmeans = KMeans(
+    n_clusters=best_n_clusters,
+    init="k-means++",
+    n_init=best_n_init,
+    random_state=42
+)
 
-kmeans = KMeans(init="k-means++", n_clusters=3, random_state=42)
-kmeans.fit(X_pca)
+labels = kmeans.fit_predict(X_sample)
 
-labels = kmeans.labels_  # los clusters asignados
-
-sample_data, sample_labels = resample(X_pca, labels, n_samples=50000, random_state=42)
-
-print(silhouette_score(sample_data, sample_labels))
-print(calinski_harabasz_score(sample_data, sample_labels))
-print(davies_bouldin_score(sample_data, sample_labels))
+print("Clusters:", best_n_clusters)
+print("Silhouette:", silhouette_score(X_sample, labels))
+print("Calinski-Harabasz:", calinski_harabasz_score(X_sample, labels))
+print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
