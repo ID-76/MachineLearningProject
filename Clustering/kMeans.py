@@ -42,6 +42,7 @@ X_scaled = scaler.fit_transform(df_processed)
 
 print("Final shape:", X_scaled.shape)
 
+"""
 # Optuna search
 db_file = "Clustering/optuna_kmeans.db"
 if os.path.exists(db_file):
@@ -85,7 +86,7 @@ print("Best found hyperparameters:")
 print(study.best_params)
 
 print("\nBest Silhouette:", study.best_value)
-
+"""
 
 # Best found hyperparameters with optuna: {'n_clusters': 9, 'n_init': 24}
 best_n_clusters = 9

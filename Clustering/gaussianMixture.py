@@ -42,63 +42,70 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(df_processed)
 
 print("Final shape:", X_scaled.shape)
+
 """
 # Optuna search
-db_file = "Clustering/optuna_gmm.db"
+db_file = "Clustering/optuna_gmm_bic.db"
 if os.path.exists(db_file):
     os.remove(db_file)
 
 study = optuna.create_study(
-    study_name="gmm_optimization",
+    study_name="gmm_optimization_bic",
     storage=f"sqlite:///{db_file}",
-    direction="maximize",     # Silhouette: the higher the better
+    direction="minimize",     # Minimizar BIC
     load_if_exists=False
 )
 
 def objective(trial):
     # Hyperparameters to optimize
-    n_components = trial.suggest_int("n_components", 2, 5)
+    n_components = trial.suggest_int("n_components", 2, 10)
     covariance_type = trial.suggest_categorical("covariance_type", ["full", "tied", "diag", "spherical"])
+    reg_covar = trial.suggest_float("reg_covar", 1e-6, 1e-1, log=True)  # estabilidad numérica
     
     # Use sample for speed
-    X_sample = resample(X_scaled, n_samples=50000, random_state=43)
-
+    X_sample = resample(X_scaled, n_samples=50000, random_state=42)
+    
+    # Fit GMM
     gmm = GaussianMixture(
         n_components=n_components,
         covariance_type=covariance_type,
-        random_state=42
+        reg_covar=reg_covar,
+        random_state=42,
     )
-
-    labels = gmm.fit_predict(X_sample)
-
-    unique_clusters = len(set(labels))
-
-    # Penalize if all points end in 1 cluster
-    if unique_clusters < 2:
-        return -1.0
     
-    score = silhouette_score(X_sample, labels)
-    return score
+    gmm.fit(X_sample)
+    
+    bic = gmm.bic(X_sample)
+    
+    labels = gmm.predict(X_sample)
+    unique_clusters = len(set(labels))
+    if unique_clusters < 2:
+        # penalize models that just merge everything in one single cluster
+        return bic + 1e6
+    
+    return bic
 
 # Execute optimization
-study.optimize(objective, n_trials=40)
+study.optimize(objective, n_trials=50)
 
 print("Best found hyperparameters:")
 print(study.best_params)
 
-print("\nBest Silhouette:", study.best_value)
+print("\nBest (minimized) BIC:", study.best_value)
 """
 
-# best params from optuna: {'n_components': 2, 'covariance_type': 'spherical'}
-best_n_components = 2
-best_covariance = "spherical"
+# best params from optuna: {'n_components': 10, 'covariance_type': 'diag', 'reg_covar': 2.1852258861569966e-06}
+best_n_components = 10
+best_covariance = "diag"
+best_reg_covar = 2.1852258861569966e-06
 
-X_sample = resample(X_scaled, n_samples=50000, random_state=43)
+X_sample = resample(X_scaled, n_samples=50000, random_state=42)
 
 gmm = GaussianMixture(
     n_components=best_n_components,
     covariance_type=best_covariance,
-    random_state=42
+    reg_covar=best_reg_covar,
+    random_state=42,
 )
 
 labels = gmm.fit_predict(X_sample)
