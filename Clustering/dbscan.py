@@ -4,7 +4,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 import os
+pd.set_option('display.max_columns', None)
 
 # LOAD DATA
 df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
@@ -41,10 +45,13 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(df_processed)
 
 print("Final shape:", X_scaled.shape)
-"""
-# Optuna search
 
+
+# Optuna search
+"""
 db_file = "Clustering/optuna_dbscan.db"
+if os.path.exists(db_file):
+    os.remove(db_file)
 
 study = optuna.create_study(
     study_name="dbscan_optimization",
@@ -55,7 +62,7 @@ study = optuna.create_study(
 
 def objective(trial):
     # Hyperparameters to optimize
-    eps = trial.suggest_float("eps", 0.1, 5.0)
+    eps = trial.suggest_float("eps", 1, 2.5)
     min_samples = trial.suggest_int("min_samples", 5, 50)
     
     X_sample = resample(X_scaled, n_samples=50000, random_state=42)
@@ -68,7 +75,7 @@ def objective(trial):
     
     labels = dbscan.fit_predict(X_sample)
     unique_clusters = len(set(labels)) - (1 if -1 in labels else 0)  # exclude noise
-    
+    print("Unique cluster: ", unique_clusters)
     # Penalize if n_cluster < 2
     if unique_clusters < 2:
         return -1.0  
@@ -85,9 +92,9 @@ print(study.best_params)
 print("\nBest Silhouette:", study.best_value)
 """
 
-# Best found hyperparameters with optuna: {'eps': 4.620325164403749, 'min_samples': 17}
-best_eps = 4.620325164403749
-best_min_samples = 17
+# Best found hyperparameters with optuna: {'eps': 2.495573753812464, 'min_samples': 16}
+best_eps = 2.495573753812464
+best_min_samples = 16
 
 X_sample = resample(X_scaled, n_samples=50000, random_state=42)
 
@@ -104,3 +111,34 @@ print("Clusters (excluding noise):", unique_clusters)
 print("Silhouette:", silhouette_score(X_sample, labels))
 print("Calinski-Harabasz:", calinski_harabasz_score(X_sample, labels))
 print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
+
+cluster_summary = pd.DataFrame(X_sample, columns=df_processed.columns)
+cluster_summary["cluster"] = labels
+print(cluster_summary.groupby("cluster").mean())
+
+# PCA to 2D
+X_tsne = TSNE(n_components=2, random_state=42).fit_transform(X_sample) 
+
+plt.figure(figsize=(10, 7))
+
+scatter = plt.scatter(
+    X_tsne[:, 0],
+    X_tsne[:, 1],
+    c=labels,
+    s=5,
+    alpha=0.6,
+    cmap='Set1'
+)
+
+plt.title(f"Clusters DBSCAN (ε={best_eps}) proyectados con t-SNE")
+plt.xlabel("Componente t-SNE 1")
+plt.ylabel("Componente t-SNE 2")
+plt.grid(True)
+
+handles, labels_plot = scatter.legend_elements()
+
+labels_plot = [f"Ruido" if l == "$-1$" else f"Cluster {l}" for l in labels_plot]
+
+plt.legend(handles, labels_plot, loc="upper left", title="Etiqueta")
+
+plt.show()

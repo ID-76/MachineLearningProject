@@ -4,7 +4,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from pyclustertend import hopkins
+import matplotlib.pyplot as plt
 import os
+pd.set_option('display.max_columns', None)
 
 # LOAD DATA
 df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
@@ -57,7 +62,7 @@ study = optuna.create_study(
 
 def objective(trial):
     # Hyperparameters to optimize
-    n_clusters = trial.suggest_int("n_clusters", 3, 10)
+    n_clusters = trial.suggest_int("n_clusters", 3, 6)
     n_init = trial.suggest_int("n_init", 5, 30)
 
     X_sample = resample(X_scaled, n_samples=50000, random_state=42)
@@ -88,9 +93,9 @@ print(study.best_params)
 print("\nBest Silhouette:", study.best_value)
 """
 
-# Best found hyperparameters with optuna: {'n_clusters': 9, 'n_init': 24}
-best_n_clusters = 9
-best_n_init = 24
+# Best found hyperparameters with optuna: {'n_clusters': 5, 'n_init': 19}
+best_n_clusters = 5
+best_n_init = 19
 
 X_sample = resample(X_scaled, n_samples=50000, random_state=42)
 
@@ -107,3 +112,36 @@ print("Clusters:", best_n_clusters)
 print("Silhouette:", silhouette_score(X_sample, labels))
 print("Calinski-Harabasz:", calinski_harabasz_score(X_sample, labels))
 print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
+
+cluster_summary = pd.DataFrame(X_sample, columns=df_processed.columns)
+cluster_summary["cluster"] = labels
+print(cluster_summary.groupby("cluster").mean())
+
+# PCA to 2 components
+X_tsne = TSNE(n_components=2, random_state=42, learning_rate='auto', init='pca').fit_transform(X_sample)
+
+plt.figure(figsize=(10, 7))
+
+scatter = plt.scatter(
+    X_tsne[:, 0],
+    X_tsne[:, 1],
+    c=labels,
+    s=5,
+    alpha=0.6,
+    cmap='Set1' 
+)
+
+plt.title(f"Clusters K-Means (k={best_n_clusters}) proyectados con t-SNE")
+plt.xlabel("Componente t-SNE 1")
+plt.ylabel("Componente t-SNE 2")
+plt.grid(True)
+
+# Crear la leyenda
+handles, labels_plot = scatter.legend_elements()
+
+# Mapear etiquetas numéricas a texto descriptivo
+labels_plot = [f"Cluster {l}" for l in range(best_n_clusters)]
+
+plt.legend(handles, labels_plot, loc="upper left", title="Etiqueta")
+
+plt.show()

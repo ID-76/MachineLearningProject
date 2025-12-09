@@ -5,7 +5,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 import os
+pd.set_option('display.max_columns', None)
 
 # LOAD DATA
 df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
@@ -58,7 +62,7 @@ study = optuna.create_study(
 
 def objective(trial):
     # Hyperparameters to optimize
-    n_components = trial.suggest_int("n_components", 2, 10)
+    n_components = trial.suggest_int("n_components", 2, 6)
     covariance_type = trial.suggest_categorical("covariance_type", ["full", "tied", "diag", "spherical"])
     reg_covar = trial.suggest_float("reg_covar", 1e-6, 1e-1, log=True)  # estabilidad numérica
     
@@ -94,10 +98,10 @@ print(study.best_params)
 print("\nBest (minimized) BIC:", study.best_value)
 """
 
-# best params from optuna: {'n_components': 10, 'covariance_type': 'diag', 'reg_covar': 2.1852258861569966e-06}
-best_n_components = 10
-best_covariance = "diag"
-best_reg_covar = 2.1852258861569966e-06
+# best params from optuna: {'n_components': 6, 'covariance_type': 'full', 'reg_covar': 1.0717446729859954e-06}
+best_n_components = 6
+best_covariance = "full"
+best_reg_covar = 1.0717446729859954e-06
 
 X_sample = resample(X_scaled, n_samples=50000, random_state=42)
 
@@ -115,3 +119,33 @@ print("Clusters:", unique_clusters)
 print("Silhouette:", silhouette_score(X_sample, labels))
 print("Calinski-Harabasz:", calinski_harabasz_score(X_sample, labels))
 print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
+
+cluster_summary = pd.DataFrame(X_sample, columns=df_processed.columns)
+cluster_summary["cluster"] = labels
+print(cluster_summary.groupby("cluster").mean())
+
+# PCA to 2 components
+X_tsne = TSNE(n_components=2, random_state=42, learning_rate='auto', init='pca').fit_transform(X_sample)
+plt.figure(figsize=(10, 7))
+
+scatter = plt.scatter(
+    X_tsne[:, 0],
+    X_tsne[:, 1],
+    c=labels,
+    s=5,
+    alpha=0.6,
+    cmap='Set1'
+)
+
+plt.title(f"Clusters GMM (n_comp={best_n_components}) proyectados con t-SNE")
+plt.xlabel("Componente t-SNE 1")
+plt.ylabel("Componente t-SNE 2")
+plt.grid(True)
+
+handles, labels_plot = scatter.legend_elements()
+
+labels_plot = [f"Cluster {l}" for l in range(best_n_components)]
+
+plt.legend(handles, labels_plot, loc="upper left", title="Etiqueta")
+
+plt.show()
