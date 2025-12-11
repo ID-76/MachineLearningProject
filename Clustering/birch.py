@@ -117,6 +117,7 @@ print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
 cluster_summary = pd.DataFrame(X_sample, columns=df_processed.columns)
 cluster_summary["cluster"] = labels
 print(cluster_summary.groupby("cluster").mean())
+print(f"Number of examples of cluster 3:", (cluster_summary["cluster"] == 3).sum())
 
 # PCA a 2 componentes para visualizar
 X_tsne = TSNE(n_components=2, random_state=42).fit_transform(X_sample)
@@ -133,9 +134,9 @@ scatter = plt.scatter(
     cmap='Set1' 
 )
 
-plt.title("Clusters BIRCH proyectados con t-SNE")
-plt.xlabel("Componente t-SNE 1")
-plt.ylabel("Componente t-SNE 2")
+plt.title("Clusters BIRCH projected with t-SNE")
+plt.xlabel("Component t-SNE 1")
+plt.ylabel("Component t-SNE 2")
 plt.grid(True)
 
 legend1 = plt.legend(

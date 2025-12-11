@@ -130,9 +130,9 @@ scatter = plt.scatter(
     cmap='Set1'
 )
 
-plt.title(f"Clusters DBSCAN (ε={best_eps}) proyectados con t-SNE")
-plt.xlabel("Componente t-SNE 1")
-plt.ylabel("Componente t-SNE 2")
+plt.title(f"Clusters DBSCAN (ε={best_eps}) projected with t-SNE")
+plt.xlabel("Component t-SNE 1")
+plt.ylabel("Component t-SNE 2")
 plt.grid(True)
 
 handles, labels_plot = scatter.legend_elements()

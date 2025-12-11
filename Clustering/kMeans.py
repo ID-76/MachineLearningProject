@@ -116,6 +116,7 @@ print("Davies-Bouldin:", davies_bouldin_score(X_sample, labels))
 cluster_summary = pd.DataFrame(X_sample, columns=df_processed.columns)
 cluster_summary["cluster"] = labels
 print(cluster_summary.groupby("cluster").mean())
+print(f"Number of examples of cluster 4:", (cluster_summary["cluster"] == 4).sum())
 
 # PCA to 2 components
 X_tsne = TSNE(n_components=2, random_state=42, learning_rate='auto', init='pca').fit_transform(X_sample)
@@ -131,9 +132,9 @@ scatter = plt.scatter(
     cmap='Set1' 
 )
 
-plt.title(f"Clusters K-Means (k={best_n_clusters}) proyectados con t-SNE")
-plt.xlabel("Componente t-SNE 1")
-plt.ylabel("Componente t-SNE 2")
+plt.title(f"Clusters K-Means (k={best_n_clusters}) projected with t-SNE")
+plt.xlabel("Component t-SNE 1")
+plt.ylabel("Component t-SNE 2")
 plt.grid(True)
 
 # Crear la leyenda
