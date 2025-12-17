@@ -15,7 +15,7 @@ DROP_MISSING_COL_THRESHOLD = 0.40  # drop columns with >40% missing
 # columns that are noisy / textual and safe to drop before processing
 TEXT_DROP_CANDIDATES = ['ID', 'Description', 'Street', 'Weather_Timestamp', 'Source', 'Country']
 # columns known near-constant/low-value to drop early
-LOW_VALUE_CATEGORICAL = ['Astronomical_Twilight', 'Nautical_Twilight', 'Civil_Twilight', 'Sunrise_Sunset']
+LOW_VALUE_CATEGORICAL = ['Astronomical_Twilight', 'Nautical_Twilight', 'Civil_Twilight']
 # skip these names when looking for datetime-like columns (they contain "time" but are not datetimes)
 DATETIME_NAME_SKIP = {'timezone'}
 
