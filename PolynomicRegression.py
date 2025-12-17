@@ -8,7 +8,7 @@ from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 # 1. Cargar y Limpiar Nombres
-df = pd.read_csv("US_Accidents_March23_sampled_500k.csv")
+df = pd.read_csv("Data/US_Accidents_March23_sampled_500k.csv")
 
 # --- LIMPIEZA DE NOMBRES DE COLUMNAS (NUEVO) ---
 # Quitamos espacios y esos extraños ;;;;; del final
