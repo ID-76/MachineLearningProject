@@ -253,77 +253,18 @@ if 'Severity' in usa_pd.columns:
 # 8) Quick peek
 print(usa_pd.head(5))
 
-# ---------- Alternative pipeline for clustering (no precipitation modification) ----------
+# ---------- Alternative pipeline for clustering (no data cleaning, no precipitation modification) ----------
 def clean_for_clustering(input_path, output_path):
-    """Performs the same cleaning as above but DOES NOT modify precipitation values.
-    Saves result to a separate CSV for clustering tasks.
+    """Load raw data and save without modifying precipitation.
+    Skips all data cleaning steps - useful for clustering on raw accident data.
     """
     df = pd.read_csv(input_path)
     print(f"\n[CLUSTERING PIPELINE] Loaded dataset: rows={df.shape[0]:,d}, cols={df.shape[1]}")
+    print(f"[CLUSTERING PIPELINE] No data cleaning applied - saving raw data with original precipitation units")
     
-    # 1) Drop noisy text/id columns
-    df = drop_text_columns(df, TEXT_DROP_CANDIDATES)
-    df = drop_low_value_columns(df, LOW_VALUE_CATEGORICAL)
-    
-    # 2) Parse datetime-like columns
-    df = parse_datetimes(df)
-    
-    # 3) Drop high-missing columns
-    df, _ = drop_sparse_columns(df, DROP_MISSING_COL_THRESHOLD)
-    df = prune_geo_and_cardinality(df)
-    
-    # 4) Lightweight imputation for key weather fields, then drop remaining NA rows
-    df = impute_weather_simple(df)
-    df = drop_rows_with_any_na(df)
-    
-    # 5) Feature engineering: simple time features and duration
-    df = add_time_features(df)
-    df = encode_time_cyclical(df)
-    # NOTE: add_zero_flags_and_log includes precipitation transformations, but won't affect original precipitation
-    df = add_zero_flags_and_log(df)
-    
-    # 6) Convert imperial -> metric units BUT PRESERVE ORIGINAL PRECIPITATION
-    # Store precipitation before conversion
-    precip_original = df['Precipitation(in)'].copy() if 'Precipitation(in)' in df.columns else None
-    
-    # Convert all metrics
-    if 'Temperature(F)' in df.columns:
-        df['Temperature(C)'] = pd.to_numeric(df['Temperature(F)'], errors='coerce').apply(
-            lambda x: (x - 32) * 5.0/9.0 if pd.notna(x) else x
-        )
-        df.drop(columns=['Temperature(F)'], inplace=True)
-    
-    if 'Wind_Chill(F)' in df.columns:
-        df['Wind_Chill(C)'] = pd.to_numeric(df['Wind_Chill(F)'], errors='coerce').apply(
-            lambda x: (x - 32) * 5.0/9.0 if pd.notna(x) else x
-        )
-        df.drop(columns=['Wind_Chill(F)'], inplace=True)
-    
-    if 'Distance(mi)' in df.columns:
-        df['Distance(km)'] = pd.to_numeric(df['Distance(mi)'], errors='coerce') * 1.609344
-        df.drop(columns=['Distance(mi)'], inplace=True)
-    
-    if 'Wind_Speed(mph)' in df.columns:
-        df['Wind_Speed(m/s)'] = pd.to_numeric(df['Wind_Speed(mph)'], errors='coerce') * 0.44704
-        df.drop(columns=['Wind_Speed(mph)'], inplace=True)
-    
-    if 'Visibility(mi)' in df.columns:
-        df['Visibility(km)'] = pd.to_numeric(df['Visibility(mi)'], errors='coerce') * 1.609344
-        df.drop(columns=['Visibility(mi)'], inplace=True)
-    
-    # SKIP Precipitation(in) -> Precipitation(mm) conversion; keep original inches
-    
-    if 'Pressure(in)' in df.columns:
-        df['Pressure(hPa)'] = pd.to_numeric(df['Pressure(in)'], errors='coerce') * 33.8638866667
-        df.drop(columns=['Pressure(in)'], inplace=True)
-    
-    df = drop_constant_columns(df)
-    df = drop_duplicates(df)
-    
-    # 7) Save for clustering
+    # Save as-is for clustering
     df.to_csv(output_path, index=False)
-    print(f"[CLUSTERING PIPELINE] Saved dataset (no precipitation modification) to {output_path} (shape {df.shape})")
-    print(f"[CLUSTERING PIPELINE] Precipitation preserved in original units (inches)")
+    print(f"[CLUSTERING PIPELINE] Saved raw dataset to {output_path} (shape {df.shape})")
     
     return df
 
