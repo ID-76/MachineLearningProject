@@ -94,64 +94,58 @@ X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 print(f" Escalado completado")
 
-# 12. ENTRENAR SGD CON ELASTIC NET (AJUSTADO PARA ESTABILIDAD)
-print(f"\nENTRENAMIENTO")
 
-start_time = time.time()
+# 12. CONFIGURACIÓN DE MODELOS
+modelos = {
+    "SGD + Elastic Net": SGDRegressor(
+        penalty='elasticnet', alpha=0.01, l1_ratio=0.5, 
+        learning_rate='adaptive', eta0=0.01, max_iter=5000, random_state=42
+    ),
+    "SGD Puro (Sin Regularización)": SGDRegressor(
+        penalty=None, # Aquí quitamos Elastic Net
+        learning_rate='adaptive', eta0=0.01, max_iter=5000, random_state=42
+    )
+}
 
-model = SGDRegressor(
-    loss='squared_error',
-    penalty='elasticnet',
-    alpha=0.0001,        # Reducido para evitar subajuste
-    l1_ratio=0.15,       # Ratio estándar de Elastic Net
-    max_iter=5000,       # Más iteraciones para asegurar convergencia
-    tol=1e-3,
-    learning_rate='adaptive', # CAMBIO CLAVE: Más estable que 'optimal'
-    eta0=0.01,                # Tasa inicial
-    early_stopping=True,
-    validation_fraction=0.1,
-    n_iter_no_change=20,
-    random_state=42
-)
+resultados = {}
 
-model.fit(X_train_scaled, y_train)
-train_time = time.time() - start_time
+# 13. ENTRENAMIENTO Y EVALUACIÓN COMPARTIVA
+for nombre, model in modelos.items():
+    model.fit(X_train_scaled, y_train)
+    y_pred_log = model.predict(X_test_scaled)
+    
+    # Clip para estabilidad y des-transformación
+    y_pred_log = np.clip(y_pred_log, a_min=None, a_max=np.log1p(240))
+    y_pred = np.expm1(y_pred_log)
+    y_test_real = np.expm1(y_test)
+    
+    # Métricas
+    resultados[nombre] = {
+        'R2': r2_score(y_test_real, y_pred),
+        'MAE': mean_absolute_error(y_test_real, y_pred),
+        'RMSE': np.sqrt(mean_squared_error(y_test_real, y_pred))
+    }
 
-# 13. PREDICCIONES
-y_pred_log = model.predict(X_test_scaled)
-# Clip para evitar valores extremos antes de expm1
-y_pred_log = np.clip(y_pred_log, a_min=None, a_max=np.log1p(240)) 
-y_pred = np.expm1(y_pred_log)
-y_test_real = np.expm1(y_test)
+# 14. MOSTRAR COMPARATIVA EN TABLA
+df_res = pd.DataFrame(resultados).T
+print("\n" + "="*40)
+print("COMPARATIVA DE RESULTADOS")
+print("="*40)
+print(df_res.to_string())
 
-# 14. EVALUACIÓN
-r2 = r2_score(y_test_real, y_pred)
-mae = mean_absolute_error(y_test_real, y_pred)
-rmse = np.sqrt(mean_squared_error(y_test_real, y_pred))
+# 15. VISUALIZACIÓN DE COMPARATIVA
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+fig.suptitle('Comparativa: Elastic Net vs SGD Puro', fontsize=16, fontweight='bold')
 
-print(f"R²:   {r2:.4f}")
-print(f"MAE:  {mae:.2f} min")
-print(f"RMSE: {rmse:.2f} min")
+metrics = ['R2', 'MAE', 'RMSE']
+colors = ['skyblue', 'salmon']
 
-# 18. VISUALIZACIÓN SIMPLIFICADA (SOLO MÉTRICAS)
-metrics = ['R²', 'MAE (min)', 'RMSE (min)']
-values = [r2, mae, rmse]
-
-plt.figure(figsize=(12, 5))
-
-# Subplot para R2 (Escala 0 a 1 usualmente)
-plt.subplot(1, 2, 1)
-plt.bar(['R²'], [r2], color='skyblue', edgecolor='black')
-plt.ylim(0, 1) # El R2 ideal es 1
-plt.title('Coeficiente de Determinación')
-plt.grid(axis='y', linestyle='--', alpha=0.7)
-
-# Subplot para Errores (MAE y RMSE)
-plt.subplot(1, 2, 2)
-plt.bar(['MAE', 'RMSE'], [mae, rmse], color=['orange', 'salmon'], edgecolor='black')
-plt.title('Métricas de Error (Minutos)')
-plt.ylabel('Minutos')
-plt.grid(axis='y', linestyle='--', alpha=0.7)
+for i, metric in enumerate(metrics):
+    axes[i].bar(df_res.index, df_res[metric], color=colors, edgecolor='black', alpha=0.8)
+    axes[i].set_title(f'Comparación de {metric}')
+    axes[i].grid(axis='y', linestyle='--', alpha=0.6)
+    if metric == 'R2':
+        axes[i].set_ylim(-0.1, 0.1) # Ajustado para ver pequeñas diferencias cerca de 0
 
 plt.tight_layout()
 plt.show()
