@@ -250,23 +250,51 @@ if 'Severity' in usa_pd.columns:
     except Exception as e:
         warnings.warn(f"Failed to create stratified subset: {e}")
 
-# 8) Quick peek
+    # 8) Quick peek
 print(usa_pd.head(5))
 
 # ---------- Alternative pipeline for clustering (no data cleaning, no precipitation modification) ----------
 def clean_for_clustering(input_path, output_path):
-    """Load raw data and save without modifying precipitation.
-    Skips all data cleaning steps - useful for clustering on raw accident data.
-    """
-    df = pd.read_csv(input_path)
-    print(f"\n[CLUSTERING PIPELINE] Loaded dataset: rows={df.shape[0]:,d}, cols={df.shape[1]}")
-    print(f"[CLUSTERING PIPELINE] No data cleaning applied - saving raw data with original precipitation units")
-    
-    # Save as-is for clustering
-    df.to_csv(output_path, index=False)
-    print(f"[CLUSTERING PIPELINE] Saved raw dataset to {output_path} (shape {df.shape})")
-    
-    return df
+    OUTPUT_PROCESSED = "US_Accidents_processed_for_modeling.csv"
+    DROP_MISSING_COL_THRESHOLD = 0.40  # drop columns with >40% missing
+    # columns that are noisy / textual and safe to drop before processing
+    TEXT_DROP_CANDIDATES = ['ID', 'Description', 'Street', 'Weather_Timestamp', 'Source']
+    # skip these names when looking for datetime-like columns (they contain "time" but are not datetimes)
+    DATETIME_NAME_SKIP = {'timezone'}
+
+    # ---------- Load data ----------
+    usa_pd = pd.read_csv(INPUT_CSV)
+    print(f"Loaded dataset: rows={usa_pd.shape[0]:,d}, cols={usa_pd.shape[1]}")
+
+    # ---------- Pipeline (simple linear sequence) ----------
+    # 1) Drop noisy text/id columns
+    usa_pd = drop_text_columns(usa_pd, TEXT_DROP_CANDIDATES)
+
+    # 2) Parse datetime-like columns (safe fallback parsing implemented)
+    usa_pd = parse_datetimes(usa_pd)
+
+    # 3) Drop high-missing columns
+    usa_pd, dropped_cols = drop_sparse_columns(usa_pd, DROP_MISSING_COL_THRESHOLD)
+
+    # 4) Drop any remaining rows with NA (user choice)
+    usa_pd = drop_rows_with_any_na(usa_pd)
+
+    # 5) Feature engineering: simple time features and duration
+    usa_pd = add_time_features(usa_pd)
+
+    # 6) Convert imperial -> metric units
+    usa_pd = convert_imperial_to_metric(usa_pd)
+
+    # 7) Save processed dataframe
+    usa_pd.to_csv(OUTPUT_PROCESSED, index=False)
+    print(f"Saved processed dataset to {OUTPUT_PROCESSED} (shape {usa_pd.shape})")
+
+    # 8) Quick peek
+    print(usa_pd.head(5))
+
+    usa_pd.to_csv(output_path, index=False)
+
+    return usa_pd
 
 # Run clustering pipeline if desired (commented out; uncomment to generate)
 clustering_output = os.path.join(DATA_DIR, "US_Accidents_for_clustering.csv")

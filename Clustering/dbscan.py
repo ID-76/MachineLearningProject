@@ -11,7 +11,7 @@ import os
 pd.set_option('display.max_columns', None)
 
 # LOAD DATA
-df = pd.read_csv("US_Accidents_processed_for_modeling.csv")
+df = pd.read_csv("Data/US_Accidents_for_clustering.csv")
 
 # Drop non-informative / ID / text fields
 df_reduced = df.drop(columns=[

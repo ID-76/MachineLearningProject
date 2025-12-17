@@ -12,13 +12,14 @@ import os
 pd.set_option('display.max_columns', None)
 
 # LOAD DATA
-df = pd.read_csv("Data/US_Accidents_processed_for_modeling.csv")
+df = pd.read_csv("Data/US_Accidents_for_clustering.csv")
 
 # Drop non-informative / ID / text fields
 df_reduced = df.drop(columns=[
-    "Start_Time", "End_Time", "City", "County", "State",
-    "Timezone", "Wind_Direction", "Amenity", "Bump", "Give_Way",
-    "No_Exit", "Railway", "Roundabout", "Traffic_Calming",
+    "Start_Time", "End_Time", "City", "County", "State", "Zipcode", "Country",
+    "Timezone", "Airport_Code", "Wind_Direction", "Civil_Twilight",
+    "Nautical_Twilight", "Astronomical_Twilight", "Amenity", "Bump", "Give_Way",
+    "No_Exit", "Railway", "Roundabout", "Traffic_Calming", "Turning_Loop",
     "Weather_Condition", "Start_Lat", "Start_Lng", "Wind_Chill(C)", "Distance(km)", "Stop",
     "Junction", "Station"
 ])
