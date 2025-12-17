@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 # -------------------------------------------------------------------
 # 1. Cargar dataset & LIMPIEZA DE NOMBRES (Fix Critical)
 # -------------------------------------------------------------------
-df = pd.read_csv("US_Accidents_March23_sampled_500k.csv")
+df = pd.read_csv("Data/US_Accidents_March23_sampled_500k.csv")
 
 # --- FIX: Cleaning dirty column names (removing ;;;;;) ---
 df.columns = [col.replace(";", "").strip() for col in df.columns]
